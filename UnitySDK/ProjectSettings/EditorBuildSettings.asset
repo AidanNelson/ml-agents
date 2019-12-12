@@ -4,4 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/ML-Agents/Examples/3DBall/Scenes/3DBall.unity
+    guid: 6f62a2ccb3830437ea4e85a617e856b3
+  m_configObjects: {}

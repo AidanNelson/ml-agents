@@ -212,6 +212,7 @@ class TFPolicy(Policy):
             tf.train.write_graph(
                 self.graph, self.model_path, "raw_graph_def.pb", as_text=False
             )
+            
 
     def export_model(self):
         """
@@ -219,8 +220,71 @@ class TFPolicy(Policy):
         """
 
         with self.graph.as_default():
-            target_nodes = ",".join(self._process_graph())
             graph_def = self.graph.as_graph_def()
+
+            # for node in graph_def.node:
+            #     print("-------")
+            #     print(node.name)
+            #     print(node.input)
+            #     print(node.attr)
+
+            # https://gist.github.com/dmwendt/ed2779f07aa849eda2e1756cd3b9fcb0
+            # vectorInput = tf.placeholder(tf.float32, [8], name='vector_observation')
+            # actionOutput = tf.placeholder(tf.float32, [2], name='vecOutput')
+
+            # self.sess.run(tf.global_variables_initializer())
+
+            # inputs_classes = tf.compat.v1.saved_model.utils.build_tensor_info(vectorInput)
+            # outputs_classes = tf.compat.v1.saved_model.utils.build_tensor_info(actionOutput)
+
+            # signature = (tf.compat.v1.saved_model.signature_def_utils.build_signature_def(inputs={tf.compat.v1.saved_model.signature_constants.CLASSIFY_INPUTS:inputs_classes},outputs={tf.compat.v1.saved_model.signature_constants.CLASSIFY_OUTPUT_CLASSES:outputs_classes},method_name=tf.compat.v1.saved_model.signature_constants.PREDICT_METHOD_NAME))
+            
+        
+            
+            # for discrete:
+            vectorInputNode = self.graph.get_tensor_by_name("vector_observation:0")
+            actionMaskInput = self.graph.get_tensor_by_name("action_masks:0")
+            actionOutputNode = self.graph.get_tensor_by_name("action:0")
+            # actionProbsOutputNode = self.graph.get_tensor_by_name("action_probs/action_probs:0")
+            sigs = {}
+            sigs[tf.compat.v1.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY] = \
+                tf.saved_model.signature_def_utils.predict_signature_def( \
+                    {"in": vectorInputNode, "actionMask": actionMaskInput}, {"out": actionOutputNode})
+            
+            # for continuous control:
+            # vectorInputNode = self.graph.get_tensor_by_name("vector_observation:0")
+            # epsilonInputNode = self.graph.get_tensor_by_name("epsilon:0")
+            # actionOutputNode = self.graph.get_tensor_by_name("action:0")
+            # sigs = {}
+            # sigs[tf.compat.v1.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY] = \
+            #     tf.saved_model.signature_def_utils.predict_signature_def( \
+            #         {"in": vectorInputNode,"epsilon": epsilonInputNode}, {"out": actionOutputNode})
+
+
+
+            # outputs_classes = tf.compat.v1.saved_model.utils.build_tensor_info(myOutput)
+            # sigs = (tf.compat.v1.saved_model.signature_def_utils.build_signature_def(inputs={tf.compat.v1.saved_model.signature_constants.CLASSIFY_INPUTS:inputs_classes},outputs={tf.compat.v1.saved_model.signature_constants.CLASSIFY_OUTPUT_CLASSES:outputs_classes},method_name=tf.compat.v1.saved_model.signature_constants.PREDICT_METHOD_NAME))
+
+
+            # legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
+
+            
+            builder = tf.compat.v1.saved_model.Builder(self.model_path + "/SavedModel/")
+            # builder.add_meta_graph_and_variables(self.sess,
+            #                                     [tf.saved_model.tag_constants.TRAINING],
+            #                                     strip_default_attrs=True)
+            # builder.add_meta_graph([tf.saved_model.tag_constants.SERVING], strip_default_attrs=True)
+            # builder.save()
+            builder.add_meta_graph_and_variables( \
+                self.sess, \
+                [tf.saved_model.tag_constants.SERVING], \
+                signature_def_map=sigs, \
+                strip_default_attrs=True)
+            builder.save()                                
+
+            
+            target_nodes = ",".join(self._process_graph())
+            
             output_graph_def = graph_util.convert_variables_to_constants(
                 self.sess, graph_def, target_nodes.replace(" ", "").split(",")
             )

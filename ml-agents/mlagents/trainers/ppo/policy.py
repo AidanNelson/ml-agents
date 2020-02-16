@@ -164,7 +164,12 @@ class PPOPolicy(TFPolicy):
                 size=(len(brain_info.vector_observations), self.model.act_size[0])
             )
             feed_dict[self.model.epsilon] = epsilon
+        # print("--------------------")
+        # print("feed dict pre:")
+        # print(feed_dict)
         feed_dict = self.fill_eval_dict(feed_dict, brain_info)
+        # print("feed dict post:")
+        # print(feed_dict)
         run_out = self._execute_model(feed_dict, self.inference_dict)
         if self.use_continuous_act:
             run_out["random_normal_epsilon"] = epsilon

@@ -228,6 +228,11 @@ class Trainer(object):
                 )
                 s = sess.run(s_op)
                 self.summary_writer.add_summary(s, self.get_step)
+                self.summary_writer.add_graph(
+                    self.policy.graph,
+                    global_step=None,
+                    graph_def=None
+                )
         except Exception:
             LOGGER.info(
                 "Cannot write text summary for Tensorboard. Tensorflow version must be r1.2 or above."
